@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Program Planner | High-Level Roadmap Generator</title>
+  <meta name="description"
+    content="Generate professional high-level program plans, roadmaps, and execution plans. Export to Excel, PowerPoint, and PDF instantly." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+
+  <!-- SheetJS (Excel) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
+  <!-- PptxGenJS (PowerPoint) -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+  <!-- jsPDF + AutoTable (PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <rect width="28" height="28" rx="8" fill="url(#logoGrad)" />
+              <path d="M7 10h14M7 14h10M7 18h12" stroke="white" stroke-width="2" stroke-linecap="round" />
+              <defs>
+                <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#6366f1" />
+                  <stop offset="1" stop-color="#8b5cf6" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <span class="logo-text">ProgramPlanner</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-ghost" id="btnLoadSample">Load Sample Data</button>
+          <button class="btn btn-ghost" id="btnClearAll">Clear All</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Banner (visible only on step 1) -->
+    <div class="hero-banner" id="heroBanner">
+      <div class="hero-content">
+        <div class="hero-badge">Program Management Automation</div>
+        <h1 class="hero-title">Build your <span class="gradient-text">Program Roadmap</span> in minutes</h1>
+        <p class="hero-subtitle">Fill in your program details and instantly generate professional high-level roadmaps,
+          execution plans, and RAID logs — ready for leadership review.</p>
+        <div class="hero-stats">
+          <div class="stat"><span class="stat-num">7</span><span class="stat-label">Guided steps</span></div>
+          <div class="stat"><span class="stat-num">3</span><span class="stat-label">Export formats</span></div>
+          <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Client-side</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stepper -->
+    <div class="stepper-container" id="stepperContainer">
+      <div class="stepper" id="stepper"></div>
+    </div>
+
+    <!-- Form Area -->
+    <main class="main-content">
+      <div class="form-card" id="formCard">
+        <div id="stepContent"></div>
+        <div class="form-nav" id="formNav">
+          <button class="btn btn-ghost" id="btnBack">← Back</button>
+          <div class="nav-right">
+            <button class="btn btn-secondary" id="btnSaveDraft">Save Draft</button>
+            <button class="btn btn-primary" id="btnNext">Next Step →</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/wizard.js"></script>
+  <script src="js/steps.js"></script>
+  <script src="js/generators/excel.js"></script>
+  <script src="js/generators/ppt.js"></script>
+  <script src="js/generators/pdf.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
