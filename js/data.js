@@ -44,7 +44,14 @@ const AppData = {
     accentColor: '#06b6d4',
     companyName: '',
     logoText: ''
-  }
+  },
+  dbId: null // Unique ID for Supabase record
+};
+
+// Supabase Configuration - PLEASE FILL THESE IN
+const SUPABASE_CONFIG = {
+  url: 'https://ndzofhhkeltuexfjarcv.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kem9maGhrZWx0dWV4ZmphcmN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzODQ0MTAsImV4cCI6MjA4ODk2MDQxMH0.tpx1IXA9pbYOVQg6Gj2ZHrezDbyegDoYEPtRfpQvhac'
 };
 
 // Phase color palette

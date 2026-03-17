@@ -27,16 +27,24 @@ const downloadBlob = (b, f) => Wizard.downloadBlob(b, f);
 // saveStep is no longer needed by generators (ExcelGenerator is self-contained)
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Try to restore draft
+    // Initialize Database
+    const dbActive = DB.init();
+    
+    // Initialize Dashboard
+    Wizard.showStep(0);
+    
+    // Check for draft and notify if exists
     if (Wizard.loadDraft()) {
-        setTimeout(() => Wizard.showToast('Draft restored from last session ✓'), 600);
+        setTimeout(() => {
+            Wizard.showToast('Existing draft restored ✓');
+        }, 600);
     }
 
-    // Start on step 1
-    Wizard.showStep(1);
-
     // Header buttons
-    document.getElementById('btnLoadSample')?.addEventListener('click', Wizard.loadSample);
+    document.getElementById('btnLoadSample')?.addEventListener('click', () => {
+        Wizard.loadSample();
+        Wizard.goTo(1); // Jump to start
+    });
     document.getElementById('btnClearAll')?.addEventListener('click', Wizard.clearAll);
 
     // Navigation

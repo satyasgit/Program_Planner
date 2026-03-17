@@ -1,5 +1,164 @@
 // ===== STEP RENDERERS =====
 const Steps = (() => {
+    // ---- DASHBOARD (Step 0): Program Library ----
+    let dashboardState = { query: '', page: 1, pageSize: 6, total: 0 };
+
+    async function renderStep0() {
+        showSpinner('Loading programs...');
+        const { data: programs, count } = await DB.searchPrograms(dashboardState.query, dashboardState.page, dashboardState.pageSize);
+        dashboardState.total = count;
+        hideSpinner();
+
+        const gridHtml = renderProgramGrid(programs);
+        const paginationHtml = renderPagination();
+
+        return `
+            <div class="dashboard-panel">
+                <div class="dashboard-header">
+                    <div class="dh-left">
+                        <h1 class="dh-title">Strategic Portfolio Dashboard</h1>
+                        <p class="dh-desc">Manage and track your global transformation program portfolio.</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" onclick="Wizard.goTo(8)">📥 Import from Jira</button>
+                        <button class="btn btn-primary" onclick="Wizard.goTo(1)" style="margin-left:8px;">+ Create New Program</button>
+                    </div>
+                </div>
+
+                <div class="search-section">
+                    <div class="search-bar">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="progSearch" value="${dashboardState.query}" placeholder="Search by name, business unit, or portfolio..." oninput="Steps.debounceSearch(this.value)" />
+                    </div>
+                </div>
+
+                <div class="program-grid" id="programGrid">
+                    ${gridHtml}
+                </div>
+
+                <div id="paginationContainer">
+                    ${paginationHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderProgramGrid(programs) {
+        if (!programs.length) return '<div class="empty-state">No programs found. Start by creating a new one!</div>';
+
+        return programs.map(p => {
+            const lastUpdated = new Date(p.updated_at).toLocaleDateString();
+            const phaseCount = p.phases ? (p.phases.count || 0) : 0;
+            
+            // Artificial progress calculation for visual appeal
+            const progress = phaseCount > 0 ? Math.min(Math.round((phaseCount / 5) * 100), 100) : 0;
+            const healthColor = progress > 60 ? 'var(--success)' : progress > 30 ? 'var(--warning)' : 'var(--danger)';
+
+            return `
+                <div class="program-card">
+                    <div class="pc-header">
+                        <span class="pc-badge">${p.business_unit || 'General'}</span>
+                        <div class="pc-health" style="background: ${healthColor}"></div>
+                    </div>
+                    <div class="pc-title">${p.name}</div>
+                    <div class="pc-meta">
+                        <span>${p.portfolio || 'Unallocated'}</span>
+                        <span class="dot">•</span>
+                        <span>${lastUpdated}</span>
+                    </div>
+                    <div class="pc-progress-container">
+                        <div class="pc-progress-bar" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="pc-metrics">
+                        <div class="pc-metric"><strong>${phaseCount}</strong> Phases</div>
+                        <div class="pc-metric"><strong>${progress}%</strong> Progress</div>
+                    </div>
+                    <div class="pc-footer" style="display:flex; justify-content:space-between; gap:8px;">
+                        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="Steps.loadProgram('${p.id}')">Edit Blueprint</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="Steps.openAnalytics('${p.id}')">Analytics 📊</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(dashboardState.total / dashboardState.pageSize);
+        if (totalPages <= 1) return '';
+
+        let buttons = '';
+        for (let i = 1; i <= totalPages; i++) {
+            const active = i === dashboardState.page ? 'active' : '';
+            buttons += `<button class="page-btn ${active}" onclick="Steps.changePage(${i})">${i}</button>`;
+        }
+
+        return `
+            <div class="pagination">
+                <button class="page-nav" onclick="Steps.changePage(${dashboardState.page - 1})" ${dashboardState.page === 1 ? 'disabled' : ''}>← Prev</button>
+                <div class="page-numbers">${buttons}</div>
+                <button class="page-nav" onclick="Steps.changePage(${dashboardState.page + 1})" ${dashboardState.page === totalPages ? 'disabled' : ''}>Next →</button>
+            </div>
+        `;
+    }
+
+    async function changePage(newPage) {
+        const totalPages = Math.ceil(dashboardState.total / dashboardState.pageSize);
+        if (newPage < 1 || newPage > totalPages) return;
+        
+        dashboardState.page = newPage;
+        showSpinner('Refreshing grid...');
+        const { data: programs } = await DB.searchPrograms(dashboardState.query, dashboardState.page, dashboardState.pageSize);
+        hideSpinner();
+        
+        const grid = document.getElementById('programGrid');
+        const pag = document.getElementById('paginationContainer');
+        if (grid) grid.innerHTML = renderProgramGrid(programs);
+        if (pag) pag.innerHTML = renderPagination();
+    }
+
+    let searchTimeout;
+    function debounceSearch(val) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            dashboardState.query = val;
+            dashboardState.page = 1; // Reset to first page
+            const { data: programs, count } = await DB.searchPrograms(val, 1, dashboardState.pageSize);
+            dashboardState.total = count;
+            
+            const grid = document.getElementById('programGrid');
+            const pag = document.getElementById('paginationContainer');
+            if (grid) grid.innerHTML = renderProgramGrid(programs);
+            if (pag) pag.innerHTML = renderPagination();
+        }, 300);
+    }
+
+    async function loadProgram(id) {
+        showSpinner('Fetching program details...');
+        const fullData = await DB.loadProgram(id);
+        hideSpinner();
+        
+        if (fullData) {
+            Object.assign(AppData, fullData);
+            Wizard.goTo(1);
+            showToast('Program loaded successfully ✓');
+        } else {
+            showToast('Failed to load program', 'error');
+        }
+    }
+
+    async function openAnalytics(id) {
+        showSpinner('Loading analytics data...');
+        const fullData = await DB.loadProgram(id);
+        hideSpinner();
+        
+        if (fullData) {
+            Object.assign(AppData, fullData);
+            Wizard.goTo(9); // 9 is the new Analytics step
+        } else {
+            showToast('Failed to load program data', 'error');
+        }
+    }
+
     // ---- HELPER: field ----
     function field(id, label, type = 'text', value = '', placeholder = '', required = false, tip = '', options = []) {
         const req = required ? '<span class="required">*</span>' : '';
@@ -660,22 +819,43 @@ const Steps = (() => {
       </div>
 
       ${divider('Generate')}
-      <div class="generate-area">
-        <div class="generate-title">Ready to generate your programme outputs?</div>
-        <div class="generate-desc">Your data will be used to build professional programme documents — ready for leadership review.</div>
-        <div class="generate-buttons">
-          <button class="btn btn-success btn-lg" id="btnGenExcel" onclick="App.generateExcel()">
-            📊 Download Excel
-          </button>
-          <button class="btn btn-warning btn-lg" id="btnGenPPT" onclick="App.generatePPT()">
-            📑 Download PowerPoint
-          </button>
-          <button class="btn btn-accent btn-lg" id="btnGenPDF" onclick="App.generatePDF()">
-            📄 Download PDF
-          </button>
-        </div>
-      </div>
-    </div>`;
+                <div class="generate-area">
+                    <h2 class="generate-title">Generate Program Plan & Dossier</h2>
+                    <p class="generate-desc">Review your details and export to your preferred executive formats.</p>
+                    
+                    <div class="final-sync-bar">
+                        <div class="sync-status">
+                            <span class="sync-icon">☁️</span>
+                            <span>Cloud Sync: ${AppData.dbId ? 'Active Record' : 'Ready to Save'}</span>
+                        </div>
+                        <button class="btn btn-success" onclick="Steps.saveToCloud()">
+                            <span>💾</span> Save & Sync to Cloud
+                        </button>
+                    </div>
+
+                    <div class="generate-buttons">
+                        <button class="btn btn-primary btn-lg" onclick="App.generateExcel()">Generate Excel Plan</button>
+                        <button class="btn btn-secondary btn-lg" onclick="App.generatePPT()">Generate PPT Steering Pack</button>
+                        <button class="btn btn-accent btn-lg" onclick="App.generatePDF()">Generate PDF Dossier</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function saveToCloud() {
+        showSpinner('Syncing to secure database...');
+        const res = await DB.saveProgram(AppData);
+        hideSpinner();
+        
+        if (res.error) {
+            const msg = res.error.message || (typeof res.error === 'string' ? res.error : 'Unknown connection error');
+            showToast('Cloud Sync Failed: ' + msg, 'error');
+        } else {
+            showToast('Program saved and synced successfully ✓', 'success');
+            // Re-render Step 7 to update the sync bar
+            Wizard.showStep(7);
+        }
     }
 
     function saveStep7() {
@@ -684,23 +864,336 @@ const Steps = (() => {
         AppData.branding.primaryColor = document.getElementById('brandPrimary')?.value || '#6366f1';
         AppData.branding.accentColor = document.getElementById('brandAccent')?.value || '#06b6d4';
         AppData.outputs.excel = document.getElementById('out_excel')?.checked ?? true;
-        AppData.outputs.ppt = document.getElementById('out_ppt')?.checked ?? true;
         AppData.outputs.pdf = document.getElementById('out_pdf')?.checked ?? true;
     }
 
+    // ---- JIRA IMPORT LOGIC ----
+    async function importFromJiraApi() {
+        showSpinner('Connecting to Jira API...');
+        const url = document.getElementById('jiraUrl').value;
+        const email = document.getElementById('jiraEmail').value;
+        const token = document.getElementById('jiraToken').value;
+        const jql = document.getElementById('jiraJql').value;
+
+        if (!url || !email || !token) {
+            hideSpinner();
+            showToast('Please fill in all API credentials', 'error');
+            return;
+        }
+
+        try {
+            // Note: Direct browser API calls to Jira usually fail due to CORS.
+            // In a production enterprise app, this would hit a backend proxy.
+            const auth = btoa(email + ':' + token);
+            const response = await fetch(`${url}/rest/api/3/search?jql=${encodeURIComponent(jql)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Basic ${auth}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            // Temporary mapping logic
+            mapJiraDataToProgram(data.issues, 'api');
+            
+            hideSpinner();
+            showToast('Import successful! Review your blueprint.', 'success');
+            Wizard.goTo(1);
+
+        } catch (e) {
+            hideSpinner();
+            console.error(e);
+            showToast('API Connection Failed (CORS or Auth Error). Try CSV.', 'error');
+        }
+    }
+
+    function handleJiraFileUpload(files) {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        showSpinner('Parsing file formatting...');
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                // We use SheetJS (xlsx) which is already included in index.html
+                const workbook = window.XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.SheetNames[0];
+                const rawJson = window.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+                
+                mapJiraDataToProgram(rawJson, 'csv');
+                
+                hideSpinner();
+                showToast('CSV Parsed successfully! Review your blueprint.', 'success');
+                Wizard.goTo(1);
+            } catch (err) {
+                hideSpinner();
+                console.error(err);
+                showToast('Failed to parse file. Ensure it is a valid Jira export.', 'error');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function mapJiraDataToProgram(issues, source) {
+        // Clear existing data
+        AppData.tasks = [];
+        AppData.phases = [];
+        AppData.programName = `Imported Jira Initiative (${new Date().toLocaleDateString()})`;
+        
+        // Basic mapping logic
+        // This accepts both Jira API JSON and flattened CSV JSON
+        
+        let epicPhaseId = uid('p');
+        AppData.phases.push({
+             id: epicPhaseId, name: 'Execution', type: 'Execute', color: '#4f46e5', description: 'Imported Tasks', order_index: 0
+        });
+
+        issues.forEach(issue => {
+            // Handle both API format and CSV format keys
+            const key = issue.key || issue['Issue key'] || uid('j');
+            const summary = (issue.fields && issue.fields.summary) ? issue.fields.summary : issue['Summary'];
+            const issueType = (issue.fields && issue.fields.issuetype) ? issue.fields.issuetype.name : issue['Issue Type'];
+            const status = (issue.fields && issue.fields.status) ? issue.fields.status.name : issue['Status'];
+            const assignee = (issue.fields && issue.fields.assignee) ? issue.fields.assignee.displayName : issue['Assignee'];
+
+            if (!summary) return; // Skip empty rows
+
+            AppData.tasks.push({
+                id: uid('t'),
+                title: `[${key}] ${summary.substring(0, 100)}`,
+                description: `Imported from Jira. Type: ${issueType}`,
+                type: issueType === 'Epic' ? 'Epic' : 'Task',
+                priority: 'Medium',
+                status: status || 'To Do',
+                phase: epicPhaseId,
+                workstream: '', // Unassigned initially
+                assignee: assignee || 'Unassigned',
+                estimate: '',
+                startDate: '',
+                dueDate: ''
+            });
+        });
+
+        // Flag the DB source
+        AppData.source_system = source === 'api' ? 'Jira API' : 'Jira CSV';
+    }
+
+    // ---- JIRA IMPORT (Step 8) ----
+    async function renderStep8() {
+        return `
+            <div class="step-layout">
+                <div class="step-header">
+                    <h2>Import Program from Jira</h2>
+                    <p>Connect to your Atlassian Jira instance or upload a CSV export to automatically generate a program blueprint.</p>
+                </div>
+                
+                <div class="import-tabs" style="display:flex; gap:16px; margin-bottom: 24px;">
+                    <button class="btn btn-primary" id="btnJiraApiTab" onclick="Steps.toggleJiraTab('api')">Jira API Connect</button>
+                    <button class="btn btn-ghost" id="btnJiraCsvTab" onclick="Steps.toggleJiraTab('csv')">CSV Upload</button>
+                </div>
+
+                <!-- API Connection Pane -->
+                <div id="paneJiraApi" class="import-pane">
+                    <div class="form-grid">
+                        ${span2(field('jiraUrl', 'Jira Base URL', 'url', 'https://your-domain.atlassian.net', 'e.g. https://acme.atlassian.net', false, 'Your Jira Cloud instance URL'))}
+                        ${field('jiraEmail', 'Atlassian Email', 'email', '', 'e.g. user@acme.com', false, 'Your Atlassian account email')}
+                        ${field('jiraToken', 'API Token', 'password', '', 'Your Jira API token', false, 'Generate this in your Atlassian Security settings')}
+                        ${span3(field('jiraJql', 'JQL Query (Epics & Tasks)', 'text', 'project = "CORE" AND type in (Epic, Task)', 'JQL to fetch program tasks', false, 'Which issues should be imported?'))}
+                    </div>
+                    <button class="btn btn-primary" style="margin-top:24px;" onclick="Steps.importFromJiraApi()">Sync via API</button>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Note: Direct API connections may be blocked by your browser's CORS policy. If this fails, use the CSV Upload method.</p>
+                </div>
+
+                <!-- CSV Upload Pane -->
+                <div id="paneJiraCsv" class="import-pane" style="display:none;">
+                    <div class="upload-zone" id="jiraDropZone" style="border:2px dashed var(--border); padding: 40px; text-align:center; border-radius:8px; background:var(--bg-card); cursor:pointer;">
+                        <div style="font-size:3rem; margin-bottom:16px;">📁</div>
+                        <h3>Upload Jira Export (CSV/Excel)</h3>
+                        <p style="color:var(--text-muted); margin-bottom: 16px;">Export your Jira issues and drop the file here to parse.</p>
+                        <input type="file" id="jiraInputFile" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display:none" onchange="Steps.handleJiraFileUpload(this.files)" />
+                        <button class="btn btn-secondary" onclick="document.getElementById('jiraInputFile').click()">Browse Files</button>
+                    </div>
+                    <div id="csvMapPreview" style="margin-top:24px;"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Toggle Import Tabs
+    function toggleJiraTab(tab) {
+        document.getElementById('paneJiraApi').style.display = tab === 'api' ? 'block' : 'none';
+        document.getElementById('paneJiraCsv').style.display = tab === 'csv' ? 'block' : 'none';
+        
+        document.getElementById('btnJiraApiTab').className = tab === 'api' ? 'btn btn-primary' : 'btn btn-ghost';
+        document.getElementById('btnJiraCsvTab').className = tab === 'csv' ? 'btn btn-primary' : 'btn btn-ghost';
+    }
+
+    // ---- ANALYTICS (Step 9) ----
+    let currentCharts = [];
+
+    async function renderStep9() {
+        // We defer chart rendering slightly to ensure the DOM is ready
+        setTimeout(initCharts, 50);
+
+        return `
+            <div class="analytics-layout" style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+                <div class="step-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:32px;">
+                    <div>
+                        <h2 style="font-size:2rem;">Dashboard: ${AppData.programName}</h2>
+                        <p style="color:var(--text-muted); font-size:1.1rem;">Portfolio: ${AppData.portfolio || 'N/A'} | Sponsor: ${AppData.sponsor || 'Unassigned'}</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="Wizard.goTo(0)">← Back to Library</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:24px; margin-bottom:32px;">
+                    <div class="metric-card" style="background:var(--bg-card); padding:24px; border-radius:12px; border:1px solid var(--border);">
+                        <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Total Tasks</div>
+                        <div style="font-size:2.5rem; font-weight:700; color:var(--primary);">${AppData.tasks.length}</div>
+                    </div>
+                    <div class="metric-card" style="background:var(--bg-card); padding:24px; border-radius:12px; border:1px solid var(--border);">
+                        <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Total Risks/Issues</div>
+                        <div style="font-size:2.5rem; font-weight:700; color:var(--danger);">${AppData.risks.length + AppData.issues.length}</div>
+                    </div>
+                    <div class="metric-card" style="background:var(--bg-card); padding:24px; border-radius:12px; border:1px solid var(--border);">
+                        <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Overall Status</div>
+                        <div style="font-size:2.5rem; font-weight:700; color:var(--success);">In Progress</div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom:24px;">
+                    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:24px;">
+                        <h3 style="margin-top:0; font-size:1.1rem; margin-bottom:16px;">Task Status Distribution</h3>
+                        <canvas id="chartTaskStatus" style="max-height: 300px;"></canvas>
+                    </div>
+                    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:24px;">
+                        <h3 style="margin-top:0; font-size:1.1rem; margin-bottom:16px;">Task Assignment</h3>
+                        <canvas id="chartTaskAssignee" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr; gap:24px;">
+                    <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:24px;">
+                        <h3 style="margin-top:0; font-size:1.1rem; margin-bottom:16px;">RAID Matrix (Risk & Issue Impact)</h3>
+                        <canvas id="chartRaid" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function initCharts() {
+        if (!window.Chart) return;
+        
+        // Destroy old charts if they exist
+        currentCharts.forEach(c => c.destroy());
+        currentCharts = [];
+
+        // 1. Task Status Distribution (Bar)
+        const statusCounts = {};
+        AppData.tasks.forEach(t => {
+            const s = t.status || 'To Do';
+            statusCounts[s] = (statusCounts[s] || 0) + 1;
+        });
+        
+        const ctxStatus = document.getElementById('chartTaskStatus');
+        if (ctxStatus) {
+            currentCharts.push(new Chart(ctxStatus, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{
+                        label: 'Tasks',
+                        data: Object.values(statusCounts),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            }));
+        }
+
+        // 2. Task Assignee (Doughnut)
+        const assigneeCounts = {};
+        AppData.tasks.forEach(t => {
+            const a = t.assignee || 'Unassigned';
+            assigneeCounts[a] = (assigneeCounts[a] || 0) + 1;
+        });
+
+        const ctxAssignee = document.getElementById('chartTaskAssignee');
+        if (ctxAssignee) {
+            currentCharts.push(new Chart(ctxAssignee, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(assigneeCounts),
+                    datasets: [{
+                        data: Object.values(assigneeCounts),
+                        backgroundColor: ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            }));
+        }
+
+        // 3. RAID Matrix (Bar for Severity)
+        // Grouping risks and issues by impact
+        const raidImpact = { 'High': 0, 'Medium': 0, 'Low': 0 };
+        [...AppData.risks, ...AppData.issues].forEach(item => {
+            const imp = item.impact || 'Low';
+            if (raidImpact[imp] !== undefined) raidImpact[imp]++;
+        });
+
+        const ctxRaid = document.getElementById('chartRaid');
+        if (ctxRaid) {
+            currentCharts.push(new Chart(ctxRaid, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(raidImpact),
+                    datasets: [{
+                        label: 'Criticality',
+                        data: Object.values(raidImpact),
+                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                        borderRadius: 4
+                    }]
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            }));
+        }
+    }
+
     // ---- PUBLIC API ----
-    function render(step) {
-        const renderers = [null, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7];
-        const html = renderers[step]?.() || '';
+    async function render(step) {
+        const renderers = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7, renderStep8, renderStep9];
+        const html = await renderers[step]?.() || '';
         document.getElementById('stepContent').innerHTML = html;
+        
+        // Hide/Show Stepper on Dashboard, Import, or Analytics
+        const stepper = document.getElementById('stepperContainer');
+        if (stepper) stepper.style.display = (step === 0 || step === 8 || step === 9) ? 'none' : 'block';
     }
 
     function save(step) {
         const savers = [null, saveStep1, saveStep2, saveStep3, saveStep4, saveStep5, saveStep6, saveStep7];
         savers[step]?.();
+        
+        // Auto-sync to DB if step > 0
+        if (step > 0 && AppData.programName) {
+            DB.saveProgram(AppData).then(res => {
+                if (res.error) console.error('DB Auto-save failed:', res.error);
+            });
+        }
     }
 
     function validate(step) {
+        if (step === 0) return true;
         if (step === 1) return validateStep1();
         return true;
     }
@@ -799,6 +1292,8 @@ const Steps = (() => {
         addRaid, removeRaid,
         addStakeholder, removeStakeholder, updateShPreview,
         addComm, removeComm,
-        toggleOutput
+        toggleOutput,
+        renderStep0, debounceSearch, changePage, loadProgram, saveToCloud,
+        toggleJiraTab, handleJiraFileUpload, importFromJiraApi, openAnalytics
     };
 })();

@@ -12,7 +12,7 @@ const WIZARD_STEPS = [
 ];
 
 const Wizard = (() => {
-    let currentStep = 1;
+    let currentStep = 0; // Start on Dashboard
 
     // ── Stepper UI ────────────────────────────────────────────────
     function renderStepper() {
@@ -48,7 +48,12 @@ const Wizard = (() => {
         // Nav buttons
         const btnBack = document.getElementById('btnBack');
         const btnNext = document.getElementById('btnNext');
-        if (btnBack) btnBack.style.display = step === 1 ? 'none' : '';
+        const btnSaveDraft = document.getElementById('btnSaveDraft');
+        const formNav = document.getElementById('formNav');
+
+        if (formNav) formNav.style.display = step === 0 ? 'none' : 'flex';
+        if (btnBack) btnBack.style.display = step <= 1 ? 'none' : '';
+        
         if (btnNext) {
             if (step === 7) {
                 btnNext.style.display = 'none';
@@ -74,9 +79,9 @@ const Wizard = (() => {
     }
 
     function goTo(target) {
-        if (target > currentStep) {
-            if (!Steps.validate(currentStep)) return;
-            Steps.save(currentStep);
+        if (target > 0 && target > currentStep) {
+            if (currentStep > 0 && !Steps.validate(currentStep)) return;
+            if (currentStep > 0) Steps.save(currentStep);
         }
         showStep(target);
     }
