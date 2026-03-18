@@ -1,110 +1,221 @@
 # Program Management Automation Suite
 
-A high-fidelity, client-side web application designed to automate the creation of strategic program plans, roadmaps, and execution dossiers.
+A full-stack web application for automating the creation of enterprise-grade program plans, roadmaps, and execution dossiers. Built with a secure **Node.js API backend** and a modern vanilla JS frontend, connected to a **Supabase (PostgreSQL)** cloud database.
+
+---
 
 ## 🚀 Key Features
 
-- **Strategic Planning Wizard**: A 7-step guided journey to define your program's DNA, from objectives and strategic themes to RAID logs and stakeholder maps.
-- **Searchable Dashboard**: A centralized "Program Library" to manage multiple strategic plans with real-time filtering and progress tracking.
-- **Jira Integration**: Instantly generate program blueprints by importing Jira issues via direct API connection or CSV upload.
-- **Advanced Analytics**: Dedicated dashboards powered by Chart.js showing task distribution, resource allocation, and RAID criticality matrixes.
-- **Advanced Export Suite**:
-  - **MS Excel**: Professional multi-sheet workbook with a visually appealing **Gantt Chart** (powered by ExcelJS).
-  - **MS PowerPoint**: Executive steering pack with automated slide generation.
-  - **PDF**: Formal program dossier with full RAID and stakeholder reporting.
-- **Relational Cloud Storage**: Real-time synchronization with **Supabase (PostgreSQL)** for persistence.
-- **Premium UI**: Modern, glassmorphic design system with responsive layouts and smooth animations.
+- **7-Step Planning Wizard**: Guided journey through program basics, phases, workstreams, task backlog, RAID log, stakeholder mapping, and export configuration.
+- **Searchable Portfolio Dashboard**: Centralised program library with real-time search, pagination, health indicators, and progress bars.
+- **Jira Integration**: Import from Jira via direct API (routed through backend proxy to solve CORS) or CSV file upload.
+- **Advanced Analytics**: Chart.js powered dashboards for task distribution, resource allocation, and RAID criticality.
+- **Export Suite**:
+  - **MS Excel** — Multi-sheet workbook with Gantt chart (ExcelJS)
+  - **MS PowerPoint** — Executive steering pack (PptxGenJS)
+  - **PDF** — Formal program dossier (jsPDF + AutoTable)
+- **Cloud Sync**: Explicit "Save & Sync" to Supabase via backend API for full control over when data persists.
+
+---
 
 ## 🏗️ Application Architecture
 
-The application focuses on a "Thick Client" architecture, executing complex rendering and generation logic directly in the user's browser to minimize latency and server costs.
+The application follows a **full-stack Client-Server architecture**. All business logic, database access, and external API calls are handled server-side by a dedicated **Node.js (Express)** backend. The browser acts as a pure **Presentation Layer**.
 
 ```mermaid
 graph TD
-    Client[Browser Client]
-    Supabase[(Supabase PostgreSQL)]
-    External[External Systems]
+    Browser["🌐 Browser (Presentation Layer)"]
+    Backend["⚙️ Node.js / Express Backend\n(API Server — localhost:3000)"]
+    Supabase[("🗄️ Supabase\nPostgreSQL Database")]
+    Jira["🔗 Jira Cloud API"]
 
-    subscript1[User Interface Layer]
-    Dashboard[Portfolio Dashboard]
-    WizardUI[7-Step Wizard]
-    AnalyticsUI[Analytics Dashboard]
-    ImportUI[Jira Import Flow]
+    subgraph Frontend ["Frontend (Vanilla JS)"]
+        Wizard["7-Step Wizard & State Manager"]
+        Dashboard["Portfolio Dashboard"]
+        Analytics["Analytics Dashboard"]
+        JiraUI["Jira Import UI"]
+        Generators["Client-side Export Generators\n(Excel / PPT / PDF)"]
+    end
 
-    subscript2[Core Business Logic]
-    Engine[Wizard Engine]
-    State[Global State Manager]
-    Exporters[Excel/PPT/PDF Generators]
-    DBClient[Supabase JS Client]
+    subgraph API ["Backend API Routes"]
+        ProgramsAPI["POST /api/programs\nGET  /api/programs\nGET  /api/programs/:id"]
+        ExportAPI["POST /api/export/excel\nPOST /api/export/ppt\nPOST /api/export/pdf"]
+        JiraProxy["POST /api/jira/fetch\n(Jira Proxy — solves CORS)"]
+    end
 
-    Client --> subscript1
-    Client --> subscript2
-    
-    Dashboard --- Engine
-    WizardUI --- Engine
-    AnalyticsUI --- State
-    ImportUI --- Engine
-    
-    Engine --- State
-    Engine --- DBClient
-    Exporters --- State
-    
-    DBClient <-->|REST / WSS| Supabase
-    ImportUI -.->|API Call (Optional)| External
+    Browser --> Frontend
+    Frontend --> |"fetch (JSON)"| API
+    API --> ProgramsAPI & ExportAPI & JiraProxy
+    ProgramsAPI --> |"Service Role Key"| Supabase
+    ExportAPI --> |"Server-side generation"| Browser
+    JiraProxy --> |"Proxied Request"| Jira
 ```
 
 ### Architecture Highlights
-1.  **Zero-Backend Generation**: Complex files (.xlsx, .pptx, .pdf) are generated entirely client-side using robust JS libraries.
-2.  **Stateless UI, Stateful DB**: The UI seamlessly rebuilds itself from the `AppData` global state, which stays perfectly synced with the Supabase backend.
-3.  **Modular Exporters**: Each output format has its own dedicated logic file (`generators/excel.js`, etc.), keeping the app highly scalable.
+
+| Concern | Design Decision |
+|---|---|
+| **Security** | Supabase Service Role Key never exposed to the browser. Jira credentials proxied server-side. |
+| **Data Integrity** | Frontend `DB` service uses a promise-based save mutex ensuring saves execute sequentially, preventing duplicate inserts. |
+| **Export** | Client-side generators for instant downloads; backend export endpoints for server-triggered generation (reports, email, etc.). |
+| **State Management** | `AppData` global object on the frontend. `dbId` tracks the Supabase primary key for update vs. insert logic. |
+| **Async Safety** | `Steps.render()` includes a race condition guard — stale API responses can never overwrite a newer step. |
+
+---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: Vanilla HTML5, CSS3 (Modern Flex/Grid), and ES6+ JavaScript.
-- **Database**: Supabase (PostgreSQL) with relational schema.
-- **Libraries (CDN)**:
-  - `ExcelJS`: Professional Excel generation & styling.
-  - `PptxGenJS`: Client-side PowerPoint generation.
-  - `jsPDF` & `jsPDF-AutoTable`: PDF creation and table formatting.
-  - `Chart.js`: Data visualization and analytics.
-  - `SheetJS` (xlsx): Local CSV/Excel parsing for Jira imports.
-  - `Supabase-JS`: Real-time backend integration.
+| Layer | Technology |
+|---|---|
+| **Frontend** | Vanilla HTML5, CSS3 (Flex/Grid), ES6+ JavaScript |
+| **Backend** | Node.js, Express.js |
+| **Database** | Supabase (PostgreSQL) |
+| **Auth / DB Proxy** | Supabase Service Role Key (server-side only) |
+| **Excel** | ExcelJS (CDN + npm) |
+| **PowerPoint** | PptxGenJS (CDN + npm) |
+| **PDF** | jsPDF + jsPDF-AutoTable (CDN + npm) |
+| **Analytics** | Chart.js (CDN) |
+| **CSV Parsing** | SheetJS / xlsx (CDN) |
+
+---
 
 ## 📦 Getting Started
 
-### 1. Local Development
-Simply serve the root directory using any local web server.
+### Prerequisites
+
+- **Node.js** v18+ and **npm** ([nodejs.org](https://nodejs.org))
+- **Git**
+- A **Supabase** project — [supabase.com](https://supabase.com)
+
+### 1. Clone the Repository
+
 ```bash
-# Example using Python
-python -m http.server 8000
+git clone https://github.com/satyasgit/Program_Planner.git
+cd Program_Planner
 ```
-Open [http://localhost:8000](http://localhost:8000) in your browser.
 
-### 2. Database Connection
-To enable cloud storage and search, configure your Supabase instance:
+### 2. Install Backend Dependencies
 
-1. Create a new project on [Supabase.com](https://supabase.com).
-2. Run the SQL schema provided in `docs/database_setup.md` in the Supabase SQL Editor.
-3. Update `js/data.js` with your project credentials:
-   ```javascript
-   const SUPABASE_CONFIG = {
-     url: 'https://your-project.supabase.co',
-     key: 'your-public-anon-key'
-   };
-   ```
+```bash
+npm install
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env` file in the project root (this file is gitignored and never committed):
+
+```bash
+# .env
+PORT=3000
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key-here
+```
+
+> **Where to find these:**
+> - Go to your Supabase project → **Settings → API**
+> - `SUPABASE_URL` = Project URL
+> - `SUPABASE_SERVICE_KEY` = `service_role` secret key (not the `anon` key)
+
+### 4. Set Up the Database
+
+Run the SQL schema in your Supabase project:
+
+1. Open your Supabase project → **SQL Editor**
+2. Copy and paste the schema from [`docs/database_setup.md`](docs/database_setup.md)
+3. Click **Run**
+
+### 5. Start the Backend Server
+
+```bash
+node server.js
+```
+
+You should see:
+```
+🚀 Program Planner Backend running on http://localhost:3000
+```
+
+### 6. Open the Application
+
+Open `index.html` directly in your browser, or serve it with a simple server:
+
+```bash
+# Python (Mac/Linux)
+python3 -m http.server 8080
+
+# Python (Windows)
+python -m http.server 8080
+```
+
+Then open [http://localhost:8080](http://localhost:8080).
+
+> **Important**: The Node.js backend (`node server.js`) **must be running** before you open the app. The frontend makes `fetch` calls to `http://localhost:3000/api/...`.
+
+---
 
 ## 📂 Project Structure
 
-- `index.html`: Main application entry point.
-- `css/`: Application styles and theme definitions.
-- `js/`:
-  - `app.js`: Application bootstrap and event delegation.
-  - `wizard.js`: Wizard navigation and global state management.
-  - `steps.js`: Step-by-step rendering and field validation.
-  - `data.js`: Central data structure and configuration.
-  - `db.js`: Supabase relational database service.
-  - `generators/`: Specific logic for Excel, PPT, and PDF creation.
-- `docs/`: Database setup instructions and technical walkthroughs.
+```
+Program_Planner_High_Level/
+├── server.js                  # Express API server (entry point)
+├── server/
+│   └── generators.js          # Server-side Excel, PPT, PDF generators
+├── package.json               # Node.js dependencies
+├── .env                       # Secrets — NOT committed to git
+├── .gitignore
+├── index.html                 # Frontend entry point
+├── css/
+│   └── styles.css             # Application styles & design system
+├── js/
+│   ├── app.js                 # Bootstrap & event delegation
+│   ├── wizard.js              # Wizard engine, navigation, state reset
+│   ├── steps.js               # Step renderers, validation, Jira import
+│   ├── data.js                # AppData schema & sample data
+│   ├── db.js                  # Frontend API proxy (fetch → Node.js)
+│   └── generators/            # Client-side export logic
+│       ├── excel.js
+│       ├── ppt.js
+│       └── pdf.js
+└── docs/
+    └── database_setup.md      # SQL schema & Supabase setup guide
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### 🪟 Windows
+
+| Issue | Fix |
+|---|---|
+| `npm` not recognised | Install Node.js from [nodejs.org](https://nodejs.org) and restart your terminal |
+| `npm : File cannot be loaded because running scripts is disabled` | Open PowerShell **as Administrator** and run: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+| Port 3000 already in use | Change `PORT=3001` in `.env`, then update `API_BASE` in `js/db.js` to match |
+| `fetch` to localhost fails | Make sure `node server.js` is running in a separate terminal before opening the app |
+| Git commit fails with special characters | Wrap commit messages in double quotes, avoid colons in the message |
+
+### 🍎 Mac / Linux
+
+| Issue | Fix |
+|---|---|
+| `node` not found | Install Node.js via [nodejs.org](https://nodejs.org) or `brew install node` |
+| Permission denied on `npm install` | Never use `sudo npm install`. Fix npm permissions: `npm config set prefix ~/.npm-global` |
+| Port 3000 in use | Run `lsof -i :3000` to find the process, then `kill -9 <PID>`, or change the PORT in `.env` |
+| CORS error in browser console | The browser must call the local Node.js backend, not Supabase directly. Ensure `server.js` is running |
+| `python3` not found for serving frontend | Use `npx serve .` instead of Python |
+
+### 🌐 General
+
+| Issue | Fix |
+|---|---|
+| Dashboard shows no programs | Check that `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env` are correct and the database schema has been applied |
+| Programs are not saving | Open browser DevTools (F12) → Network tab → check for failed requests to `localhost:3000/api/programs` |
+| Jira import fails | Ensure your Jira URL is the full base URL (e.g. `https://yourcompany.atlassian.net`), not an issue URL |
+| Dates reset after reload | Ensure you click "Save & Sync to Cloud" before navigating away from the program |
+| Export files not downloading | Check browser popup/download permissions; some corporate browsers block auto-downloads |
+
+---
 
 ## 📄 License
-Internal Property - Designed for Program Management Professionals.
+
+Internal Property — Designed for Program Management Professionals.
