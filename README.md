@@ -81,6 +81,19 @@ graph TD
 
 ## 📦 Getting Started
 
+### npm Scripts
+
+This project uses npm scripts as the unified command interface. All commands should be run from the project root.
+
+| Command | Description |
+|---|---|
+| `npm install` | Install all dependencies (run once after cloning) |
+| `npm start` | Start the backend server in **production** mode using `node` |
+| `npm run dev` | Start the backend in **development** mode using `nodemon` — auto-restarts on file save |
+
+> **Why `nodemon`?**  
+> During development, any change to `server.js` or `server/generators.js` requires a server restart. `nodemon` watches for file changes and restarts automatically, removing manual interruptions and making the dev loop significantly faster. It is listed under `devDependencies` and is **not** installed in production.
+
 ### Prerequisites
 
 - **Node.js** v18+ and **npm** ([nodejs.org](https://nodejs.org))
