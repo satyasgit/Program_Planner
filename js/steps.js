@@ -139,6 +139,7 @@ const Steps = (() => {
         
         if (fullData) {
             Object.assign(AppData, fullData);
+            Wizard.applyTheme();
             Wizard.goTo(1);
             showToast('Program loaded successfully ✓');
         } else {
@@ -875,6 +876,7 @@ const Steps = (() => {
         AppData.branding.accentColor = document.getElementById('brandAccent')?.value || '#06b6d4';
         AppData.outputs.excel = document.getElementById('out_excel')?.checked ?? true;
         AppData.outputs.pdf = document.getElementById('out_pdf')?.checked ?? true;
+        Wizard.applyTheme();
     }
 
     // ---- JIRA IMPORT LOGIC ----

@@ -137,6 +137,26 @@ const Wizard = (() => {
         showToast('Sample program loaded ✓');
     }
 
+    function applyTheme() {
+        if (!AppData.branding) return;
+        const b = AppData.branding;
+        const root = document.documentElement;
+        
+        if (b.primaryColor) {
+            root.style.setProperty('--primary', b.primaryColor);
+            // Very simple rough hex-to-rgba for focus outlines if necessary
+        }
+        if (b.accentColor) {
+            root.style.setProperty('--accent', b.accentColor);
+        }
+        
+        // Update the header logo text if it exists
+        const logoTxt = document.querySelector('.logo-text');
+        if (logoTxt) {
+            logoTxt.textContent = b.logoText || (b.companyName ? b.companyName + ' Planner' : 'ProgramPlanner');
+        }
+    }
+
     function _resetAppData() {
         const strFields = ['programName', 'description', 'businessUnit', 'portfolio', 'sponsor', 'programManager', 'startDate', 'endDate', 'objectives', 'successMetrics', 'strategicThemes', 'constraints', 'regulatoryDrivers'];
         strFields.forEach(k => { AppData[k] = ''; });
@@ -157,6 +177,7 @@ const Wizard = (() => {
         AppData.branding = { primaryColor: '#6366f1', secondaryColor: '#8b5cf6', accentColor: '#06b6d4', companyName: '', logoText: '' };
         AppData.source_system = 'Manual';
         AppData.external_project_key = null;
+        applyTheme();
     }
 
     function startNewProgram() {
@@ -195,5 +216,5 @@ const Wizard = (() => {
         }, 5000);
     }
 
-    return { showStep, next, back, goTo, showToast, showSpinner, hideSpinner, saveDraft, loadDraft, loadSample, startNewProgram, clearAll, safeFileName, today, downloadBlob, currentStep: () => currentStep };
+    return { showStep, next, back, goTo, showToast, showSpinner, hideSpinner, saveDraft, loadDraft, loadSample, startNewProgram, clearAll, safeFileName, today, downloadBlob, applyTheme, currentStep: () => currentStep };
 })();

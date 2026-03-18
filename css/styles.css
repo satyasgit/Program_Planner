@@ -525,20 +525,18 @@ input.invalid, select.invalid, textarea.invalid {
 }
 .program-card {
     background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-    padding: 24px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 24px; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     display: flex; flex-direction: column; gap: 16px;
     position: relative; overflow: hidden;
 }
 .program-card:hover {
-    transform: translateY(-4px); border-color: var(--primary-light);
-    background: var(--bg-card-hover); box-shadow: var(--shadow-lg);
+    transform: translateY(-6px) scale(1.02); 
+    border-color: var(--primary);
+    background: var(--bg-card-hover); 
+    box-shadow: 0 0 0 2px var(--primary), 0 20px 30px rgba(0, 0, 0, 0.4);
+    z-index: 2;
 }
-.program-card::after {
-    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 0;
-    background: var(--primary); transition: height 0.3s ease;
-}
-.program-card:hover::after { height: 100%; }
-
+/* Removed the asymmetrical ::after left-edge highlight for a uniform border highlight */
 .pc-header { display: flex; justify-content: space-between; align-items: center; }
 .pc-badge {
     font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
