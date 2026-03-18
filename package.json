@@ -1,0 +1,34 @@
+{
+  "name": "program_planner_high-level",
+  "version": "1.0.0",
+  "description": "A high-fidelity, client-side web application designed to automate the creation of strategic program plans, roadmaps, and execution dossiers.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/satyasgit/Program_Planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/satyasgit/Program_Planner/issues"
+  },
+  "homepage": "https://github.com/satyasgit/Program_Planner#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "pptxgenjs": "^4.0.1"
+  }
+}

@@ -41,7 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Header buttons
-    document.getElementById('btnLoadSample')?.addEventListener('click', () => {
+    document.getElementById('btnLoadSample')?.addEventListener('click', (e) => {
+        e.preventDefault();
         Wizard.loadSample();
         Wizard.goTo(1); // Jump to start
     });

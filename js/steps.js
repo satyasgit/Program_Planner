@@ -21,7 +21,7 @@ const Steps = (() => {
                     </div>
                     <div>
                         <button class="btn btn-secondary" onclick="Wizard.goTo(8)">📥 Import from Jira</button>
-                        <button class="btn btn-primary" onclick="Wizard.goTo(1)" style="margin-left:8px;">+ Create New Program</button>
+                        <button class="btn btn-primary" onclick="Wizard.startNewProgram()" style="margin-left:8px;">+ Create New Program</button>
                     </div>
                 </div>
 
@@ -159,19 +159,29 @@ const Steps = (() => {
         }
     }
 
+    // ---- HELPER: format date for HTML input ----
+    function dateStr(val) {
+        if (!val) return '';
+        if (val instanceof Date) return val.toISOString().slice(0, 10);
+        if (typeof val === 'string' && val.length >= 10) return val.slice(0, 10);
+        return val;
+    }
+
     // ---- HELPER: field ----
     function field(id, label, type = 'text', value = '', placeholder = '', required = false, tip = '', options = []) {
         const req = required ? '<span class="required">*</span>' : '';
         const tipHtml = tip ? `<span class="tooltip-icon" data-tip="${tip}">?</span>` : '';
+        // Auto-format dates for date inputs
+        const displayValue = type === 'date' ? dateStr(value) : value;
         let input;
         if (type === 'select') {
             input = `<select id="${id}">
-        ${options.map(o => `<option value="${o.value ?? o}" ${(o.value ?? o) === value ? 'selected' : ''}>${o.label ?? o}</option>`).join('')}
+        ${options.map(o => `<option value="${o.value ?? o}" ${(o.value ?? o) === displayValue ? 'selected' : ''}>${o.label ?? o}</option>`).join('')}
       </select>`;
         } else if (type === 'textarea') {
-            input = `<textarea id="${id}" placeholder="${placeholder}" rows="3">${value}</textarea>`;
+            input = `<textarea id="${id}" placeholder="${placeholder}" rows="3">${displayValue}</textarea>`;
         } else {
-            input = `<input type="${type}" id="${id}" value="${value}" placeholder="${placeholder}" />`;
+            input = `<input type="${type}" id="${id}" value="${displayValue}" placeholder="${placeholder}" />`;
         }
         return `<div class="form-group">
       <label for="${id}">${label} ${req} ${tipHtml}</label>
@@ -869,7 +879,7 @@ const Steps = (() => {
 
     // ---- JIRA IMPORT LOGIC ----
     async function importFromJiraApi() {
-        showSpinner('Connecting to Jira API...');
+        showSpinner('Connecting to Jira via backend proxy...');
         const url = document.getElementById('jiraUrl').value;
         const email = document.getElementById('jiraEmail').value;
         const token = document.getElementById('jiraToken').value;
@@ -882,31 +892,30 @@ const Steps = (() => {
         }
 
         try {
-            // Note: Direct browser API calls to Jira usually fail due to CORS.
-            // In a production enterprise app, this would hit a backend proxy.
-            const auth = btoa(email + ':' + token);
-            const response = await fetch(`${url}/rest/api/3/search?jql=${encodeURIComponent(jql)}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Basic ${auth}`,
-                    'Accept': 'application/json'
-                }
+            // Route through our secure Node.js backend proxy (no CORS issues!)
+            const response = await fetch('http://localhost:3000/api/jira/fetch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, email, token, jql })
             });
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || `Server error: ${response.status}`);
+            }
+
             const data = await response.json();
             
-            // Temporary mapping logic
             mapJiraDataToProgram(data.issues, 'api');
             
             hideSpinner();
-            showToast('Import successful! Review your blueprint.', 'success');
+            showToast(`Import successful! ${data.issues.length} issues loaded.`, 'success');
             Wizard.goTo(1);
 
         } catch (e) {
             hideSpinner();
             console.error(e);
-            showToast('API Connection Failed (CORS or Auth Error). Try CSV.', 'error');
+            showToast('API Connection Failed: ' + e.message, 'error');
         }
     }
 
@@ -1173,6 +1182,11 @@ const Steps = (() => {
     async function render(step) {
         const renderers = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7, renderStep8, renderStep9];
         const html = await renderers[step]?.() || '';
+        
+        // Prevent Async Race Conditions
+        // If the user navigated to another step while this one was generating, abort!
+        if (typeof Wizard !== 'undefined' && Wizard.currentStep() !== step) return;
+
         document.getElementById('stepContent').innerHTML = html;
         
         // Hide/Show Stepper on Dashboard, Import, or Analytics
@@ -1183,13 +1197,8 @@ const Steps = (() => {
     function save(step) {
         const savers = [null, saveStep1, saveStep2, saveStep3, saveStep4, saveStep5, saveStep6, saveStep7];
         savers[step]?.();
-        
-        // Auto-sync to DB if step > 0
-        if (step > 0 && AppData.programName) {
-            DB.saveProgram(AppData).then(res => {
-                if (res.error) console.error('DB Auto-save failed:', res.error);
-            });
-        }
+        // No auto-sync here. Saving to the database only happens
+        // when the user explicitly clicks "Save & Sync to Cloud".
     }
 
     function validate(step) {

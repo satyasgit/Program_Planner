@@ -131,20 +131,43 @@ const Wizard = (() => {
 
     function loadSample() {
         Object.assign(AppData, JSON.parse(JSON.stringify(SAMPLE_DATA)));
-        showStep(currentStep);
+        AppData.dbId = null; // Force a new insert on save
+        AppData.id = null;
+        // Navigation is handled externally (e.g., app.js calling goTo)
         showToast('Sample program loaded ✓');
+    }
+
+    function _resetAppData() {
+        const strFields = ['programName', 'description', 'businessUnit', 'portfolio', 'sponsor', 'programManager', 'startDate', 'endDate', 'objectives', 'successMetrics', 'strategicThemes', 'constraints', 'regulatoryDrivers'];
+        strFields.forEach(k => { AppData[k] = ''; });
+        AppData.dbId = null;
+        AppData.id = null;
+        AppData.currency = 'USD';
+        AppData.fiscalYearStart = '1';
+        AppData.phases = [];
+        AppData.workstreams = [];
+        AppData.tasks = [];
+        AppData.risks = [];
+        AppData.issues = [];
+        AppData.assumptions = [];
+        AppData.dependencies = [];
+        AppData.stakeholders = [];
+        AppData.communicationPlan = [];
+        AppData.outputs = { excel: true, ppt: true, pdf: true };
+        AppData.branding = { primaryColor: '#6366f1', secondaryColor: '#8b5cf6', accentColor: '#06b6d4', companyName: '', logoText: '' };
+        AppData.source_system = 'Manual';
+        AppData.external_project_key = null;
+    }
+
+    function startNewProgram() {
+        _resetAppData();
+        showStep(1);
+        showToast('Ready to create a new program ✓');
     }
 
     function clearAll() {
         if (!confirm('Clear all data? This cannot be undone.')) return;
-        const blank = {
-            phases: [], workstreams: [], tasks: [], risks: [], issues: [], assumptions: [], dependencies: [], stakeholders: [], communicationPlan: [],
-            outputs: { excel: true, ppt: true, pdf: true }, branding: { primaryColor: '#6366f1', secondaryColor: '#8b5cf6', accentColor: '#06b6d4', companyName: '', logoText: '' }
-        };
-        const strFields = ['programName', 'description', 'businessUnit', 'portfolio', 'sponsor', 'programManager', 'startDate', 'endDate', 'currency', 'fiscalYearStart', 'objectives', 'successMetrics', 'strategicThemes', 'constraints', 'regulatoryDrivers'];
-        strFields.forEach(k => { AppData[k] = ''; });
-        Object.assign(AppData, blank);
-        AppData.currency = 'USD'; AppData.fiscalYearStart = '1';
+        _resetAppData();
         localStorage.removeItem('pp_draft_v2');
         showStep(1);
         showToast('All data cleared');
@@ -172,5 +195,5 @@ const Wizard = (() => {
         }, 5000);
     }
 
-    return { showStep, next, back, goTo, showToast, showSpinner, hideSpinner, saveDraft, loadDraft, loadSample, clearAll, safeFileName, today, downloadBlob, currentStep: () => currentStep };
+    return { showStep, next, back, goTo, showToast, showSpinner, hideSpinner, saveDraft, loadDraft, loadSample, startNewProgram, clearAll, safeFileName, today, downloadBlob, currentStep: () => currentStep };
 })();
