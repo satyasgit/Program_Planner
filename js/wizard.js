@@ -9,6 +9,7 @@ const WIZARD_STEPS = [
     { id: 5, label: 'RAID Log' },
     { id: 6, label: 'Stakeholders' },
     { id: 7, label: 'Export' },
+    { id: 10, label: 'Sprint Analysis' }
 ];
 
 const Wizard = (() => {

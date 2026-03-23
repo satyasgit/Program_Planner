@@ -73,9 +73,10 @@ const Steps = (() => {
                         <div class="pc-metric"><strong>${phaseCount}</strong> Phases</div>
                         <div class="pc-metric"><strong>${progress}%</strong> Progress</div>
                     </div>
-                    <div class="pc-footer" style="display:flex; justify-content:space-between; gap:8px;">
+                    <div class="pc-footer" style="display:flex; flex-wrap:wrap; gap:8px;">
                         <button class="btn btn-ghost btn-sm" style="flex:1" onclick="Steps.loadProgram('${p.id}')">Edit Blueprint</button>
                         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="Steps.openAnalytics('${p.id}')">Analytics 📊</button>
+                        <button class="btn btn-primary btn-sm" style="flex-basis:100%" onclick="Steps.openAiAnalyst('${p.id}')">AI Sprint Analyst 🤖</button>
                     </div>
                 </div>
             `;
@@ -144,6 +145,17 @@ const Steps = (() => {
             showToast('Program loaded successfully ✓');
         } else {
             showToast('Failed to load program', 'error');
+        }
+    }
+
+    async function openAiAnalyst(id) {
+        showSpinner('Opening AI Analyst...');
+        const fullData = await DB.loadProgram(id);
+        hideSpinner();
+        if (fullData) {
+            Object.assign(AppData, fullData);
+            Wizard.applyTheme();
+            Wizard.goTo(10);
         }
     }
 
@@ -1043,6 +1055,110 @@ const Steps = (() => {
         document.getElementById('btnJiraCsvTab').className = tab === 'csv' ? 'btn btn-primary' : 'btn btn-ghost';
     }
 
+    // ---- AI SPRINT ANALYST (Step 10) ----
+    function renderStep10() {
+        return `
+            <div class="step-container">
+                <div class="step-header">
+                    <h2>AI Sprint Analyst</h2>
+                    <p>Leverage AI to analyze sprint performance against your program objectives. Objective, data-driven insights tailored to your strategy.</p>
+                </div>
+
+                <div class="form-grid">
+                    ${span2(field('aiSprintName', 'Sprint Name/ID', 'text', 'Sprint 01', 'e.g. Q1 Sprint 4', false, 'The name of the sprint appearing in the analysis'))}
+                    ${span3(`
+                        <div class="field-group">
+                            <label>Sprint Report / Retro Data <span class="info-icon" title="Paste your Jira sprint report, retro notes, or velocity data here.">ⓘ</span></label>
+                            <textarea id="aiSprintData" placeholder="Example: Velocity was 45 points. Completed 8/10 stories. Technical debt slowed down workstream A. Team is unhappy with deployment delays..." style="min-height:200px;"></textarea>
+                        </div>
+                    `)}
+                </div>
+
+                <div style="margin-top:24px; display:flex; gap:16px; align-items:center;">
+                    <button class="btn btn-primary" onclick="Steps.runSprintAnalysis()">🚀 Run AI Analysis</button>
+                    <p id="aiStatus" style="font-size:0.9rem; color:var(--text-muted); margin:0;"></p>
+                </div>
+
+                <div id="aiResultContainer" style="margin-top:40px; display:none;">
+                    <!-- Results will be injected here -->
+                </div>
+            </div>
+        `;
+    }
+
+    async function runSprintAnalysis() {
+        const sprintName = document.getElementById('aiSprintName')?.value;
+        const sprintData = document.getElementById('aiSprintData')?.value;
+        const statusEl = document.getElementById('aiStatus');
+        const resultContainer = document.getElementById('aiResultContainer');
+
+        if (!sprintData) {
+            Wizard.showToast('Please provide sprint data to analyze', 'warning');
+            return;
+        }
+
+        if (!AppData.dbId) {
+            Wizard.showToast('Please save the program first to enable AI analysis', 'warning');
+            return;
+        }
+
+        try {
+            statusEl.textContent = '🤖 AI is analyzing... please wait (checking context)...';
+            statusEl.style.color = 'var(--primary-light)';
+            
+            const programContext = {
+                name: AppData.programName,
+                objectives: AppData.objectives,
+                strategicThemes: AppData.strategicThemes,
+                successMetrics: AppData.successMetrics
+            };
+
+            const result = await DB.analyzeSprint(AppData.dbId, sprintName, sprintData, programContext);
+            const a = result.analysis;
+
+            resultContainer.innerHTML = `
+                <div class="ai-analysis-card">
+                    <div class="ai-card-header">
+                        <h3>Sprint Analysis: ${a.sprint_name || 'Current Sprint'}</h3>
+                        <span class="ai-badge">${result.source === 'database' ? 'Loaded from History' : 'New AI Intelligence'}</span>
+                    </div>
+                    
+                    <div class="ai-section">
+                        <h4>📝 Executive Summary</h4>
+                        <p>${a.ai_summary}</p>
+                    </div>
+
+                    <div class="ai-grid">
+                        <div class="ai-box positive">
+                            <h4>🟢 Positives (What went well)</h4>
+                            <ul>
+                                ${a.ai_positives.map(p => `<li>${p}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="ai-box delta">
+                            <h4>🔴 Deltas (Areas for Improvement)</h4>
+                            <ul>
+                                ${a.ai_deltas.map(d => `<li>${d}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultContainer.style.display = 'block';
+            statusEl.textContent = '✓ Analysis complete';
+            statusEl.style.color = 'var(--success)';
+            
+            Wizard.showToast('AI Analysis delivered ✓');
+            
+        } catch (err) {
+            console.error(err);
+            statusEl.textContent = '❌ Error: ' + err.message;
+            statusEl.style.color = 'var(--danger)';
+            Wizard.showToast('AI Analysis failed', 'error');
+        }
+    }
+
     // ---- ANALYTICS (Step 9) ----
     let currentCharts = [];
 
@@ -1305,6 +1421,7 @@ const Steps = (() => {
         addComm, removeComm,
         toggleOutput,
         renderStep0, debounceSearch, changePage, loadProgram, saveToCloud,
-        toggleJiraTab, handleJiraFileUpload, importFromJiraApi, openAnalytics
+        toggleJiraTab, handleJiraFileUpload, importFromJiraApi, openAnalytics,
+        renderStep10, runSprintAnalysis, openAiAnalyst
     };
 })();

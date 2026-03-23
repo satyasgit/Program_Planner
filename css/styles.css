@@ -592,3 +592,35 @@ input.invalid, select.invalid, textarea.invalid {
     background: var(--bg-card); border: 2px dashed var(--border); border-radius: var(--radius-lg);
     color: var(--text-muted); font-size: 1.1rem;
 }
+
+/* AI Sprint Analyst Styles */
+.ai-analysis-card {
+    background: var(--bg-card);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+}
+.ai-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.ai-card-header h3 { color: var(--text-primary); margin: 0; }
+.ai-badge {
+    background: rgba(16, 185, 129, 0.1); color: var(--success);
+    font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.ai-section { margin-bottom: 24px; }
+.ai-section h4 { margin-bottom: 8px; color: var(--primary-light); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.ai-box { padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); }
+.ai-box.positive { background: rgba(16, 185, 129, 0.03); border-color: rgba(16, 185, 129, 0.1); }
+.ai-box.delta { background: rgba(239, 68, 68, 0.03); border-color: rgba(239, 68, 68, 0.1); }
+.ai-box h4 { margin-bottom: 12px; font-size: 1rem; color: var(--text-primary); }
+.ai-box ul { padding-left: 20px; color: var(--text-secondary); font-size: 0.95rem; }
+.ai-box li { margin-bottom: 8px; }
+
+@media (max-width: 768px) {
+    .ai-grid { grid-template-columns: 1fr; }
+}

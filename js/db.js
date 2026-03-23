@@ -113,10 +113,32 @@ const DB = (() => {
         }
     }
 
+    // --- AI Sprint Analysis ---
+    async function analyzeSprint(programId, sprintName, sprintData, programContext) {
+        try {
+            const response = await fetch(`${API_BASE}/sprint/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ programId, sprintName, sprintData, programContext })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to analyze sprint');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error analyzing sprint via API:', error);
+            throw error;
+        }
+    }
+
     return {
         init,
         saveProgram,
         searchPrograms,
-        loadProgram
+        loadProgram,
+        analyzeSprint
     };
 })();

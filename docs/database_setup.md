@@ -134,8 +134,21 @@ ALTER TABLE tasks
 ADD COLUMN IF NOT EXISTS external_id TEXT,
 ADD COLUMN IF NOT EXISTS external_url TEXT;
 
+```sql
 -- Add tracking for Jira Ticket IDs on the RAID level
 ALTER TABLE raid_items 
 ADD COLUMN IF NOT EXISTS external_id TEXT,
 ADD COLUMN IF NOT EXISTS external_url TEXT;
+
+-- V1.2 AI Sprint Analyst Migration
+CREATE TABLE IF NOT EXISTS sprint_retros (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
+    sprint_name TEXT,
+    raw_data TEXT,
+    ai_summary TEXT,
+    ai_positives JSONB, -- Array of strings
+    ai_deltas JSONB,    -- Array of strings
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```

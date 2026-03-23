@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const { OpenAI } = require('openai');
 const { generateExcel, generatePPT, generatePDF } = require('./server/generators');
 
 const app = express();
@@ -25,6 +26,11 @@ const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', 
         autoRefreshToken: false,
         persistSession: false
     }
+});
+
+// Initialize OpenAI Client
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || 'placeholder'
 });
 
 // --- API ROUTES ---
@@ -304,6 +310,88 @@ app.post('/api/jira/fetch', async (req, res) => {
     } catch (err) {
         console.error('Jira API proxy error:', err.message);
         res.status(502).json({ error: err.message });
+    }
+});
+
+// --- AI SPRINT ANALYST ROUTE ---
+
+app.post('/api/sprint/analyze', async (req, res) => {
+    try {
+        const { programId, sprintName, sprintData, programContext } = req.body;
+
+        if (!programId || !sprintData) {
+            return res.status(400).json({ error: 'Missing programId or sprintData.' });
+        }
+
+        // 1. Check if analysis already exists in DB
+        const { data: existing, error: fetchError } = await supabase
+            .from('sprint_retros')
+            .select('*')
+            .eq('program_id', programId)
+            .eq('sprint_name', sprintName)
+            .single();
+
+        if (existing) {
+            return res.json({ source: 'database', analysis: existing });
+        }
+
+        // 2. No existing analysis, call OpenAI
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(500).json({ error: 'OpenAI API Key not configured on server.' });
+        }
+
+        const prompt = `
+            You are an objective Agile Delivery Manager. 
+            Analyze the following Sprint Data in the context of the Program Objectives.
+            
+            PROGRAM CONTEXT:
+            ${JSON.stringify(programContext, null, 2)}
+            
+            SPRINT DATA:
+            ${sprintData}
+            
+            Provide a structured analysis including:
+            1. An executive summary (max 3 sentences).
+            2. Top 3-5 Positives (what went well, linked to program goals).
+            3. Top 3-5 Deltas (areas for improvement or risks identified).
+            
+            Respond ONLY with a valid JSON object in this format:
+            {
+                "summary": "...",
+                "positives": ["...", "..."],
+                "deltas": ["...", "..."]
+            }
+        `;
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini", // Efficient and cost-effective for analysis
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" }
+        });
+
+        const aiOutput = JSON.parse(completion.choices[0].message.content);
+
+        // 3. Save to DB for future retrieval
+        const { data: saved, error: saveError } = await supabase
+            .from('sprint_retros')
+            .insert({
+                program_id: programId,
+                sprint_name: sprintName,
+                raw_data: sprintData,
+                ai_summary: aiOutput.summary,
+                ai_positives: aiOutput.positives,
+                ai_deltas: aiOutput.deltas
+            })
+            .select()
+            .single();
+
+        if (saveError) throw saveError;
+
+        res.json({ source: 'openai', analysis: saved });
+
+    } catch (err) {
+        console.error('AI Analysis error:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
