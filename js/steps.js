@@ -1008,10 +1008,14 @@ const Steps = (() => {
     // ---- JIRA IMPORT (Step 8) ----
     async function renderStep8() {
         return `
-            <div class="step-layout">
+
+            <div class="step-panel">
                 <div class="step-header">
-                    <h2>Import Program from Jira</h2>
-                    <p>Connect to your Atlassian Jira instance or upload a CSV export to automatically generate a program blueprint.</p>
+
+
+                    <div class="step-eyebrow">Import from External Source</div>
+                    <div class="step-title">Import Program from Jira</div>
+                    <div class="step-desc">Connect to your Atlassian Jira instance or upload a CSV export to automatically generate a program blueprint.</div>
                 </div>
                 
                 <div class="import-tabs" style="display:flex; gap:16px; margin-bottom: 24px;">
@@ -1020,19 +1024,23 @@ const Steps = (() => {
                 </div>
 
                 <!-- API Connection Pane -->
-                <div id="paneJiraApi" class="import-pane">
-                    <div class="form-grid">
+
+
+                <div id="paneJiraApi" class="import-pane" style="max-width: 100%; overflow-x: auto;">
+                    <div class="form-grid cols-2">
                         ${span2(field('jiraUrl', 'Jira Base URL', 'url', 'https://your-domain.atlassian.net', 'e.g. https://acme.atlassian.net', false, 'Your Jira Cloud instance URL'))}
                         ${field('jiraEmail', 'Atlassian Email', 'email', '', 'e.g. user@acme.com', false, 'Your Atlassian account email')}
                         ${field('jiraToken', 'API Token', 'password', '', 'Your Jira API token', false, 'Generate this in your Atlassian Security settings')}
-                        ${span3(field('jiraJql', 'JQL Query (Epics & Tasks)', 'text', 'project = "CORE" AND type in (Epic, Task)', 'JQL to fetch program tasks', false, 'Which issues should be imported?'))}
+
+                        ${span2(field('jiraJql', 'JQL Query (Epics & Tasks)', 'text', 'project = "CORE" AND type in (Epic, Task)', 'JQL to fetch program tasks', false, 'Which issues should be imported?'))}
                     </div>
                     <button class="btn btn-primary" style="margin-top:24px;" onclick="Steps.importFromJiraApi()">Sync via API</button>
                     <p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Note: Direct API connections may be blocked by your browser's CORS policy. If this fails, use the CSV Upload method.</p>
                 </div>
 
                 <!-- CSV Upload Pane -->
-                <div id="paneJiraCsv" class="import-pane" style="display:none;">
+
+                <div id="paneJiraCsv" class="import-pane" style="display:none; max-width: 100%; overflow-x: auto;">
                     <div class="upload-zone" id="jiraDropZone" style="border:2px dashed var(--border); padding: 40px; text-align:center; border-radius:8px; background:var(--bg-card); cursor:pointer;">
                         <div style="font-size:3rem; margin-bottom:16px;">📁</div>
                         <h3>Upload Jira Export (CSV/Excel)</h3>

@@ -1,0 +1,24 @@
+{
+  "name": "mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for JIRA Integration - Pure Node.js Implementation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "mcp",
+    "jira",
+    "integration",
+    "api"
+  ],
+  "author": "Enterprise Architecture Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=25.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "notes": "This package.json is for documentation only. Due to npm issues, no packages can be installed. The server uses only Node.js built-in modules."
+}

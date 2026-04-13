@@ -6,11 +6,16 @@ const { OpenAI } = require('openai');
 const { generateExcel, generatePPT, generatePDF } = require('./server/generators');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
+console.log('🔧 PORT from .env:', process.env.PORT);
+console.log('🔧 Using port:', port);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the root directory
+app.use(express.static(__dirname));
 
 // Initialize Supabase Admin Client
 // Using the Service Role Key allows the backend to bypass RLS and perform all DB operations securely
@@ -34,6 +39,11 @@ const openai = new OpenAI({
 });
 
 // --- API ROUTES ---
+
+// Root route - serve index.html
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
 
 // Health Check
 app.get('/api/health', (req, res) => {
