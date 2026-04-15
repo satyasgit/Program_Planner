@@ -1,26 +1,44 @@
 # Program Management Automation Suite
 
-A full-stack web application for automating the creation of enterprise-grade program plans, roadmaps, and execution dossiers. Built with a secure **Node.js API backend** and a modern vanilla JS frontend, connected to a **Supabase (PostgreSQL)** cloud database.
+
+A full-stack web application for automating the creation of enterprise-grade program plans, roadmaps, and execution dossiers. Built with a secure **Node.js API backend** and a modern vanilla JS frontend, connected to a **PostgreSQL** database with **AI-powered analytics** and **JIRA integration**.
 
 ---
 
 ## 🚀 Key Features
 
-- **7-Step Planning Wizard**: Guided journey through program basics, phases, workstreams, task backlog, RAID log, stakeholder mapping, and export configuration.
+
+- **10-Step Planning Wizard**: Comprehensive journey through program basics, phases, workstreams, task backlog, RAID log, stakeholder mapping, export configuration, JIRA import, and AI analysis.
 - **Searchable Portfolio Dashboard**: Centralised program library with real-time search, pagination, health indicators, and progress bars.
-- **Jira Integration**: Import from Jira via direct API (routed through backend proxy to solve CORS) or CSV file upload.
+
+- **Advanced JIRA Integration**: 
+  - Import from JIRA via direct API (routed through backend proxy to solve CORS) or CSV file upload
+  - Automatic field mapping and data extraction
+  - Historical data sync with incremental updates
+- **AI Sprint Analyst**: AI-powered sprint performance analysis with actionable insights
+- **KPI Dashboard**: Real-time project metrics including:
+  - Sprint Predictability
+  - First Time Pass Rate (FTPR)
+  - Defect Density
+  - Regression Rate
+  - Defect Leakage
+  - Reopen Rate
+  - Cross-project Dependencies
 - **Advanced Analytics**: Chart.js powered dashboards for task distribution, resource allocation, and RAID criticality.
 - **Export Suite**:
   - **MS Excel** — Multi-sheet workbook with Gantt chart (ExcelJS)
   - **MS PowerPoint** — Executive steering pack (PptxGenJS)
   - **PDF** — Formal program dossier (jsPDF + AutoTable)
-- **Cloud Sync**: Explicit "Save & Sync" to Supabase via backend API for full control over when data persists.
+
+- **Cloud Sync**: Explicit "Save & Sync" to PostgreSQL via backend API for full control over when data persists.
+- **MCP Server Integration**: Model Context Protocol server for enhanced JIRA connectivity and AI capabilities
 
 ---
 
 ## 🏗️ Application Architecture
 
-The application follows a **full-stack Client-Server architecture**. All business logic, database access, and external API calls are handled server-side by a dedicated **Node.js (Express)** backend. The browser acts as a pure **Presentation Layer**.
+
+The application follows a **full-stack Client-Server architecture** with **AI-enhanced capabilities**. All business logic, database access, and external API calls are handled server-side by a dedicated **Node.js (Express)** backend. The browser acts as a pure **Presentation Layer** with modern JavaScript components.
 
 ```mermaid
 graph TD
@@ -69,12 +87,15 @@ graph TD
 |---|---|
 | **Frontend** | Vanilla HTML5, CSS3 (Flex/Grid), ES6+ JavaScript |
 | **Backend** | Node.js, Express.js |
-| **Database** | Supabase (PostgreSQL) |
-| **Auth / DB Proxy** | Supabase Service Role Key (server-side only) |
+
+| **Database** | PostgreSQL (Local/Cloud) |
+| **Auth / DB Proxy** | PostgreSQL connection (server-side only) |
 | **Excel** | ExcelJS (CDN + npm) |
 | **PowerPoint** | PptxGenJS (CDN + npm) |
 | **PDF** | jsPDF + jsPDF-AutoTable (CDN + npm) |
 | **Analytics** | Chart.js (CDN) |
+| **AI Integration** | OpenAI API for Sprint Analysis |
+| **JIRA Integration** | JIRA Cloud API with OAuth2 |
 | **CSV Parsing** | SheetJS / xlsx (CDN) |
 
 ---
@@ -98,7 +119,9 @@ This project uses npm scripts as the unified command interface. All commands sho
 
 - **Node.js** v18+ and **npm** ([nodejs.org](https://nodejs.org))
 - **Git**
-- A **Supabase** project — [supabase.com](https://supabase.com)
+- **PostgreSQL** v14+ (local or cloud instance)
+- **JIRA Cloud** account (for JIRA integration)
+- **OpenAI API Key** (for AI Sprint Analyst)
 
 ### 1. Clone the Repository
 
@@ -120,32 +143,77 @@ Create a `.env` file in the project root (this file is gitignored and never comm
 ```bash
 # .env
 PORT=3000
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key-here
+
+# PostgreSQL Database
+PG_HOST=localhost
+PG_PORT=5432
+PG_DATABASE=program_planner
+PG_USER=your_db_user
+PG_PASSWORD=your_db_password
+
+# JIRA Integration
+JIRA_CLOUD_URL=https://your-domain.atlassian.net
+JIRA_API_TOKEN=your_jira_api_token
+JIRA_USER_EMAIL=your_email@company.com
+
+# AI Integration
+OPENAI_API_KEY=your_openai_api_key
+
+# MCP Server (Optional)
+MCP_SERVER_PORT=3001
 ```
 
 > **Where to find these:**
-> - Go to your Supabase project → **Settings → API**
-> - `SUPABASE_URL` = Project URL
-> - `SUPABASE_SERVICE_KEY` = `service_role` secret key (not the `anon` key)
+> - **PostgreSQL**: Use your local PostgreSQL installation or cloud provider credentials
+> - **JIRA API Token**: Go to [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
+> - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
 
 ### 4. Set Up the Database
 
-Run the SQL schema in your Supabase project:
+Run the database migrations:
 
-1. Open your Supabase project → **SQL Editor**
-2. Copy and paste the schema from [`docs/database_setup.md`](docs/database_setup.md)
-3. Click **Run**
+```bash
+# Run all migrations
+npm run migrate
+
+# Or manually run migrations
+cd database
+node run-migrations.js
+```
+
+The migrations will create all necessary tables including:
+- `users` - User management
+- `projects` - Project metadata
+- `programs` - Main program data
+- `steps` - Wizard step data
+- `jira_sync_tracking` - JIRA synchronization tracking
 
 ### 5. Start the Backend Server
 
 ```bash
-node server.js
+# Production mode
+npm start
+
+# Development mode (with auto-restart)
+npm run dev
 ```
 
 You should see:
 ```
 🚀 Program Planner Backend running on http://localhost:3000
+✅ PostgreSQL connection established
+📊 KPI endpoints ready
+🤖 AI Sprint Analyst ready
+```
+
+### 6. (Optional) Start MCP Server
+
+For enhanced JIRA integration:
+
+```bash
+cd mcp-server
+npm install
+npm start
 ```
 
 ### 6. Open the Application
@@ -177,20 +245,43 @@ Program_Planner_High_Level/
 ├── .env                       # Secrets — NOT committed to git
 ├── .gitignore
 ├── index.html                 # Frontend entry point
+├── kpi-dashboard-page.html    # KPI Dashboard page
+├── ai-sprint-analyst.html     # AI Sprint Analyst page
+├── analytics.html             # Analytics Dashboard
 ├── css/
-│   └── styles.css             # Application styles & design system
+│   ├── styles.css             # Application styles & design system
+│   └── kpi-dashboard.css      # KPI Dashboard styles
 ├── js/
 │   ├── app.js                 # Bootstrap & event delegation
 │   ├── wizard.js              # Wizard engine, navigation, state reset
 │   ├── steps.js               # Step renderers, validation, Jira import
 │   ├── data.js                # AppData schema & sample data
 │   ├── db.js                  # Frontend API proxy (fetch → Node.js)
+│   ├── kpi-calculator.js      # KPI calculation logic
+│   ├── kpi-dashboard.js       # KPI Dashboard functionality
+│   ├── jira-field-sync.js     # JIRA field synchronization
+│   ├── components/            # JavaScript components
+│   │   ├── KpiDashboard.js    # KPI Dashboard component
+│   │   └── ErrorBoundary.js   # Error handling component
 │   └── generators/            # Client-side export logic
 │       ├── excel.js
 │       ├── ppt.js
 │       └── pdf.js
+├── database/
+│   ├── migrations/            # SQL migration files
+│   ├── pg-connection.js       # PostgreSQL connection
+│   └── run-migrations.js      # Migration runner
+├── mcp-server/                # Model Context Protocol server
+│   ├── server.js              # MCP server entry point
+│   ├── connectors/
+│   │   └── jira-connector.js  # JIRA API connector
+│   └── middleware/
+│       └── auth.js            # Authentication middleware
+├── config/
+│   └── jira-field-mappings.json  # JIRA field configuration
 └── docs/
-    └── database_setup.md      # SQL schema & Supabase setup guide
+    ├── database_setup.md      # Database setup guide
+    └── KPI_IMPLEMENTATION_SUMMARY.md  # KPI implementation details
 ```
 
 ---
@@ -221,14 +312,97 @@ Program_Planner_High_Level/
 
 | Issue | Fix |
 |---|---|
-| Dashboard shows no programs | Check that `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env` are correct and the database schema has been applied |
+| Dashboard shows no programs | Check PostgreSQL connection in `.env` and ensure migrations have been run |
 | Programs are not saving | Open browser DevTools (F12) → Network tab → check for failed requests to `localhost:3000/api/programs` |
-| Jira import fails | Ensure your Jira URL is the full base URL (e.g. `https://yourcompany.atlassian.net`), not an issue URL |
+| JIRA import fails | Ensure your JIRA URL is the full base URL (e.g. `https://yourcompany.atlassian.net`), API token is valid, and user has necessary permissions |
 | Dates reset after reload | Ensure you click "Save & Sync to Cloud" before navigating away from the program |
 | Export files not downloading | Check browser popup/download permissions; some corporate browsers block auto-downloads |
 
 ---
 
-## 📄 License
+---
+
+## 🆕 Recent Updates (Version 2.0.0)
+
+### Major Features Added:
+
+1. **KPI Dashboard**
+   - Real-time calculation of 6 key performance indicators
+   - Historical trend analysis with interactive charts
+   - Cross-project dependency visualization
+   - Automated data extraction from JIRA
+
+2. **AI Sprint Analyst**
+   - AI-powered sprint performance analysis
+   - Actionable insights and recommendations
+   - Historical analysis storage
+   - Integration with OpenAI GPT-4
+
+3. **Enhanced JIRA Integration**
+   - Extensible field mapping system
+   - Incremental data synchronization
+   - Custom field support
+   - Automatic KPI calculation from JIRA data
+
+4. **MCP Server**
+   - Model Context Protocol implementation
+   - Enhanced JIRA connectivity
+   - WebSocket support for real-time updates
+   - Middleware for authentication and caching
+
+5. **Database Improvements**
+   - PostgreSQL migration from Supabase
+   - New tables for JIRA sync tracking
+   - Optimized indexes for performance
+   - Support for JSON/JSONB fields
+
+### Technical Improvements:
+
+- **Error Handling**: Comprehensive error boundaries and logging
+- **Performance**: Optimized data fetching and caching strategies
+- **Security**: Enhanced authentication and API key management
+- **Scalability**: Modular architecture for easy feature additions
+- **Documentation**: Extensive inline documentation and guides
+
+---
+
+## � Roadmap
+
+### Phase 3 (Next Sprint):
+- [ ] Advanced AI capabilities for predictive analytics
+- [ ] Real-time collaboration features
+- [ ] Mobile-responsive design
+- [ ] Integration with Microsoft Teams and Slack
+- [ ] Advanced reporting and custom KPI builder
+- [ ] Multi-language support
+
+### Phase 4 (Future):
+- [ ] Machine learning for resource optimization
+- [ ] Blockchain for audit trails
+- [ ] AR/VR visualization for complex programs
+- [ ] Voice-activated program management
+
+---
+
+## �📄 License
 
 Internal Property — Designed for Program Management Professionals.
+
+---
+
+## 🤝 Contributing
+
+For internal contributors:
+1. Create a feature branch from `main`
+2. Follow the coding standards in `CONTRIBUTING.md`
+3. Ensure all tests pass
+4. Submit a pull request with detailed description
+
+---
+
+## 📞 Support
+
+For issues or questions:
+- Internal Teams: #program-planner-support
+- Email: program-planner@company.com
+- Documentation: [Internal Wiki](https://wiki.company.com/program-planner)
